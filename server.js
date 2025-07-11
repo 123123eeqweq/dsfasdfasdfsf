@@ -28,20 +28,10 @@ const app = express();
 const server = http.createServer(app);
 
 const allowedOrigin = 'https://frontend272727.vercel.app/';
-const io = new Server(server, {
-  cors: {
-    origin: allowedOrigin, // Разрешаем только твой фронт
-    methods: ['GET', 'POST'],
-    credentials: true // На случай авторизации или кук
-  },
-});
+const io = new Server(server);
 
 // Middleware
-app.use(cors({
-  origin: allowedOrigin, // Разрешаем только твой фронт
-  methods: ['GET', 'POST'], // Твои роуты используют только GET и POST
-  credentials: true // На случай авторизации или кук
-}));
+
 app.use(express.json());
 
 
