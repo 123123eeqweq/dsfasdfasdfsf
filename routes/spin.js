@@ -1,8 +1,8 @@
 import express from 'express';
 import Case from '../models/Case.js';
-import Gift from '../models/Gift.js';
 import User from '../models/User.js';
 import LiveSpin from '../models/LiveSpin.js';
+import cases from '../data/cases.js';
 
 const router = express.Router();
 
@@ -20,7 +20,7 @@ router.post('/:caseId', async (req, res) => {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    const caseItem = await Case.findOne({ caseId });
+    const caseItem = cases.find(c => c.id === caseId);
     if (!caseItem || !caseItem.items || caseItem.items.length === 0) {
       return res.status(404).json({ message: 'Кейс не найден или пуст' });
     }
@@ -64,57 +64,50 @@ router.post('/:caseId', async (req, res) => {
       }
     }
 
-    let chosenGift = null;
-    let chosenProbability = 0;
+    let chosenGiftId = null;
 
     if (isHunterCase) {
       // Для хантер-кейсов всегда возвращаем gift_001
-      chosenGift = await Gift.findOne({ giftId: 'gift_001' });
-      chosenProbability = 1;
+      chosenGiftId = 'gift_001';
     } else {
       // Обычная логика выбора подарка
       const rand = Math.random();
       let cumulativeProbability = 0;
-      for (let i = 0; i < caseItem.items.length; i++) {
-        const item = caseItem.items[i];
+      for (const item of caseItem.items) {
         // Пропускаем gift_037 (plushpepe)
         if (item.giftId === 'gift_037') continue;
         cumulativeProbability += item.probability;
         if (rand <= cumulativeProbability) {
-          chosenGift = await Gift.findOne({ giftId: item.giftId });
-          chosenProbability = item.probability;
+          chosenGiftId = item.giftId;
           break;
         }
       }
       // Fallback: выбираем первый подарок с ненулевой вероятностью, кроме gift_037
-      if (!chosenGift) {
+      if (!chosenGiftId) {
         const validItems = caseItem.items.filter(item => item.probability > 0 && item.giftId !== 'gift_037');
         if (validItems.length === 0) {
           // Если нет валидных подарков, возвращаем gift_001
-          chosenGift = await Gift.findOne({ giftId: 'gift_001' });
-          chosenProbability = 1;
+          chosenGiftId = 'gift_001';
         } else {
-          const fallbackItem = validItems[0];
-          chosenGift = await Gift.findOne({ giftId: fallbackItem.giftId });
-          chosenProbability = fallbackItem.probability;
+          chosenGiftId = validItems[0].giftId;
         }
       }
     }
 
     // Дополнительная защита: если случайно выбрался gift_037, заменяем на gift_001
-    if (chosenGift.giftId === 'gift_037') {
-      chosenGift = await Gift.findOne({ giftId: 'gift_001' });
-      chosenProbability = 1;
+    if (chosenGiftId === 'gift_037') {
+      chosenGiftId = 'gift_001';
     }
 
     // Обновление пользователя (только для не-демо режима)
     if (!isDemo) {
-      if (chosenGift.giftId !== 'gift_001') {
+      if (chosenGiftId !== 'gift_001') {
+        const gift = cases.find(c => c.id === caseId).items.find(i => i.giftId === chosenGiftId);
         user.inventory.push({
-          giftId: chosenGift.giftId,
-          name: chosenGift.name,
-          image: chosenGift.image,
-          price: chosenGift.price,
+          giftId: chosenGiftId,
+          name: gift.name,
+          image: gift.image,
+          price: gift.price,
         });
       }
       if (caseId === 'case_13') {
@@ -127,20 +120,14 @@ router.post('/:caseId', async (req, res) => {
 
       // Логирование спина
       const liveSpin = new LiveSpin({
-        giftId: chosenGift.giftId,
-        caseId: caseItem.caseId,
+        giftId: chosenGiftId,
+        caseId: caseItem.id,
       });
       await liveSpin.save();
     }
 
     res.json({
-      gift: {
-        giftId: chosenGift.giftId,
-        name: chosenGift.name,
-        image: chosenGift.image,
-        price: chosenGift.price,
-      },
-      probability: chosenProbability,
+      giftId: chosenGiftId,
       newBalance: isDemo ? user.balance : user.balance,
       newDiamonds: isDemo ? user.diamonds : user.diamonds,
     });
