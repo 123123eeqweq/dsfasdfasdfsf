@@ -1,0 +1,40 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "tgrun_admin_bot": "node tgrun_admin_bot.js",
+    "promo": "node promo.js",
+    "seed": "node seed.js",
+    "tgrun_id_check_bot": "node tgrun_id_check_bot.js",
+    "seed_black_list": "node seed_black_list.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@gramio/init-data": "^0.0.5",
+    "@telegram-apps/init-data-node": "^2.0.10",
+    "@ton/ton": "^15.3.0",
+    "axios": "^1.9.0",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.16.0",
+    "node-cron": "^4.1.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "telegraf": "^4.16.3",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
