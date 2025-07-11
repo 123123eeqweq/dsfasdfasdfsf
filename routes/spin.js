@@ -66,13 +66,11 @@ router.post('/:caseId', async (req, res) => {
 
     let chosenGift = null;
     let chosenProbability = 0;
-    let chosenIndex = 0;
 
     if (isHunterCase) {
       // Для хантер-кейсов всегда возвращаем gift_001
       chosenGift = await Gift.findOne({ giftId: 'gift_001' });
       chosenProbability = 1;
-      chosenIndex = caseItem.items.findIndex(item => item.giftId === 'gift_001');
     } else {
       // Обычная логика выбора подарка
       const rand = Math.random();
@@ -85,7 +83,6 @@ router.post('/:caseId', async (req, res) => {
         if (rand <= cumulativeProbability) {
           chosenGift = await Gift.findOne({ giftId: item.giftId });
           chosenProbability = item.probability;
-          chosenIndex = i;
           break;
         }
       }
@@ -96,12 +93,10 @@ router.post('/:caseId', async (req, res) => {
           // Если нет валидных подарков, возвращаем gift_001
           chosenGift = await Gift.findOne({ giftId: 'gift_001' });
           chosenProbability = 1;
-          chosenIndex = caseItem.items.findIndex(item => item.giftId === 'gift_001');
         } else {
           const fallbackItem = validItems[0];
           chosenGift = await Gift.findOne({ giftId: fallbackItem.giftId });
           chosenProbability = fallbackItem.probability;
-          chosenIndex = caseItem.items.findIndex(item => item.giftId === fallbackItem.giftId);
         }
       }
     }
@@ -110,11 +105,7 @@ router.post('/:caseId', async (req, res) => {
     if (chosenGift.giftId === 'gift_037') {
       chosenGift = await Gift.findOne({ giftId: 'gift_001' });
       chosenProbability = 1;
-      chosenIndex = caseItem.items.findIndex(item => item.giftId === 'gift_001');
     }
-
-    // Определяем позицию в ленте
-    const tapePosition = Math.floor(50 * 0.75) + chosenIndex % 5;
 
     // Обновление пользователя (только для не-демо режима)
     if (!isDemo) {
@@ -150,7 +141,6 @@ router.post('/:caseId', async (req, res) => {
         price: chosenGift.price,
       },
       probability: chosenProbability,
-      tapePosition,
       newBalance: isDemo ? user.balance : user.balance,
       newDiamonds: isDemo ? user.diamonds : user.diamonds,
     });
