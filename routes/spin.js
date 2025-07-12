@@ -1,9 +1,8 @@
 import express from 'express';
-import Case from '../models/Case.js';
 import User from '../models/User.js';
 import LiveSpin from '../models/LiveSpin.js';
 import cases from '../data/cases.js';
-import gifts from '../data/gifts.js'; // Добавляем импорт gifts.js
+import gifts from '../data/gifts.js';
 
 const router = express.Router();
 
