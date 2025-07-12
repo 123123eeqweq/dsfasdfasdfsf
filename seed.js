@@ -14,7 +14,7 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
-
+console.log("Скрипт seed.js запущен!");
 const seedDB = async () => {
   try {
     await connectDB();

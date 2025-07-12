@@ -3,6 +3,7 @@ import Case from '../models/Case.js';
 import User from '../models/User.js';
 import LiveSpin from '../models/LiveSpin.js';
 import cases from '../data/cases.js';
+import gifts from '../data/gifts.js'; // Добавляем импорт gifts.js
 
 const router = express.Router();
 
@@ -25,12 +26,10 @@ router.post('/:caseId', async (req, res) => {
       return res.status(404).json({ message: 'Кейс не найден или пуст' });
     }
 
-    // Проверка на демо-режим для Free Daily, реферальных и кейсов за депозиты
     if (isDemo && (caseId === 'case_13' || caseItem.isReferral || caseItem.isTopup)) {
       return res.status(403).json({ message: 'Демо-режим недоступен для этого кейса' });
     }
 
-    // Проверка баланса (только для не-демо режима)
     if (!isDemo) {
       if (caseId === 'case_13') {
         const now = new Date();
@@ -65,49 +64,58 @@ router.post('/:caseId', async (req, res) => {
     }
 
     let chosenGiftId = null;
+    let chosenGift = null;
 
     if (isHunterCase) {
-      // Для хантер-кейсов всегда возвращаем gift_001
       chosenGiftId = 'gift_001';
+      chosenGift = gifts.find(g => g.id === chosenGiftId) || {
+        id: 'gift_001',
+        name: 'Ничего',
+        price: 0,
+      };
     } else {
-      // Обычная логика выбора подарка
       const rand = Math.random();
       let cumulativeProbability = 0;
       for (const item of caseItem.items) {
-        // Пропускаем gift_037 (plushpepe)
         if (item.giftId === 'gift_037') continue;
         cumulativeProbability += item.probability;
         if (rand <= cumulativeProbability) {
           chosenGiftId = item.giftId;
+          chosenGift = gifts.find(g => g.id === chosenGiftId);
           break;
         }
       }
-      // Fallback: выбираем первый подарок с ненулевой вероятностью, кроме gift_037
       if (!chosenGiftId) {
         const validItems = caseItem.items.filter(item => item.probability > 0 && item.giftId !== 'gift_037');
         if (validItems.length === 0) {
-          // Если нет валидных подарков, возвращаем gift_001
           chosenGiftId = 'gift_001';
+          chosenGift = gifts.find(g => g.id === chosenGiftId) || {
+            id: 'gift_001',
+            name: 'Ничего',
+            price: 0,
+          };
         } else {
           chosenGiftId = validItems[0].giftId;
+          chosenGift = gifts.find(g => g.id === chosenGiftId);
         }
       }
     }
 
-    // Дополнительная защита: если случайно выбрался gift_037, заменяем на gift_001
     if (chosenGiftId === 'gift_037') {
       chosenGiftId = 'gift_001';
+      chosenGift = gifts.find(g => g.id === chosenGiftId) || {
+        id: 'gift_001',
+        name: 'Ничего',
+        price: 0,
+      };
     }
 
-    // Обновление пользователя (только для не-демо режима)
     if (!isDemo) {
       if (chosenGiftId !== 'gift_001') {
-        const gift = cases.find(c => c.id === caseId).items.find(i => i.giftId === chosenGiftId);
         user.inventory.push({
           giftId: chosenGiftId,
-          name: gift.name,
-          image: gift.image,
-          price: gift.price,
+          name: chosenGift.name,
+          price: chosenGift.price,
         });
       }
       if (caseId === 'case_13') {
@@ -118,7 +126,6 @@ router.post('/:caseId', async (req, res) => {
       }
       await user.save();
 
-      // Логирование спина
       const liveSpin = new LiveSpin({
         giftId: chosenGiftId,
         caseId: caseItem.id,
@@ -128,10 +135,15 @@ router.post('/:caseId', async (req, res) => {
 
     res.json({
       giftId: chosenGiftId,
+      gift: {
+        name: chosenGift.name,
+        price: chosenGift.price,
+      },
       newBalance: isDemo ? user.balance : user.balance,
       newDiamonds: isDemo ? user.diamonds : user.diamonds,
     });
   } catch (error) {
+    console.error("Ошибка в spin.js:", error.message);
     res.status(500).json({ message: 'Внутренняя ошибка сервера' });
   }
 });
