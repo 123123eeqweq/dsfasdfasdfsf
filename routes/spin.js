@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post('/:caseId', async (req, res) => {
   try {
-    const { telegramId, isDemo, isHunterCase } = req.body;
+    const { telegramId, isDemo } = req.body;
     const { caseId } = req.params;
 
     if (!telegramId) {
@@ -25,12 +25,12 @@ router.post('/:caseId', async (req, res) => {
       return res.status(404).json({ message: 'Кейс не найден или пуст' });
     }
 
-    if (isDemo && (caseId === 'case_13' || caseItem.isReferral || caseItem.isTopup)) {
+    if (isDemo && caseId === 'case_1') {
       return res.status(403).json({ message: 'Демо-режим недоступен для этого кейса' });
     }
 
     if (!isDemo) {
-      if (caseId === 'case_13') {
+      if (caseId === 'case_1') {
         const now = new Date();
         const lastSpin = user.lastFreeDailySpin;
         if (lastSpin && now - lastSpin < 24 * 60 * 60 * 1000) {
@@ -39,21 +39,6 @@ router.post('/:caseId', async (req, res) => {
             message: `Бесплатный спин доступен через ${Math.floor(timeLeft / 3600000)}ч ${Math.floor((timeLeft % 3600000) / 60000)}м`,
           });
         }
-      } else if (caseItem.isTopup) {
-        const requiredDeposits = parseInt(caseItem.name.match(/\d+/)[0]);
-        if (user.totalDeposits < requiredDeposits) {
-          return res.status(403).json({
-            message: `Недостаточно депозитов. Требуется ${requiredDeposits} звёзд, у вас ${user.totalDeposits}`,
-          });
-        }
-        if (user.openedTopupCases.includes(caseId)) {
-          return res.status(403).json({ message: 'Этот кейс уже открыт' });
-        }
-      } else if (caseItem.isReferral && caseItem.diamondPrice > 0) {
-        if (user.diamonds < caseItem.diamondPrice) {
-          return res.status(400).json({ message: `Недостаточно алмазов. Требуется ${caseItem.diamondPrice}, у вас ${user.diamonds}` });
-        }
-        user.diamonds -= caseItem.diamondPrice;
       } else if (caseItem.price > 0) {
         if (user.balance < caseItem.price) {
           return res.status(400).json({ message: `Недостаточно звёзд. Требуется ${caseItem.price}, у вас ${user.balance}` });
@@ -65,38 +50,29 @@ router.post('/:caseId', async (req, res) => {
     let chosenGiftId = null;
     let chosenGift = null;
 
-    if (isHunterCase) {
-      chosenGiftId = 'gift_001';
-      chosenGift = gifts.find(g => g.id === chosenGiftId) || {
-        id: 'gift_001',
-        name: 'Ничего',
-        price: 0,
-      };
-    } else {
-      const rand = Math.random();
-      let cumulativeProbability = 0;
-      for (const item of caseItem.items) {
-        if (item.giftId === 'gift_037') continue;
-        cumulativeProbability += item.probability;
-        if (rand <= cumulativeProbability) {
-          chosenGiftId = item.giftId;
-          chosenGift = gifts.find(g => g.id === chosenGiftId);
-          break;
-        }
+    const rand = Math.random();
+    let cumulativeProbability = 0;
+    for (const item of caseItem.items) {
+      if (item.giftId === 'gift_037') continue;
+      cumulativeProbability += item.probability;
+      if (rand <= cumulativeProbability) {
+        chosenGiftId = item.giftId;
+        chosenGift = gifts.find(g => g.id === chosenGiftId);
+        break;
       }
-      if (!chosenGiftId) {
-        const validItems = caseItem.items.filter(item => item.probability > 0 && item.giftId !== 'gift_037');
-        if (validItems.length === 0) {
-          chosenGiftId = 'gift_001';
-          chosenGift = gifts.find(g => g.id === chosenGiftId) || {
-            id: 'gift_001',
-            name: 'Ничего',
-            price: 0,
-          };
-        } else {
-          chosenGiftId = validItems[0].giftId;
-          chosenGift = gifts.find(g => g.id === chosenGiftId);
-        }
+    }
+    if (!chosenGiftId) {
+      const validItems = caseItem.items.filter(item => item.probability > 0 && item.giftId !== 'gift_037');
+      if (validItems.length === 0) {
+        chosenGiftId = 'gift_001';
+        chosenGift = gifts.find(g => g.id === chosenGiftId) || {
+          id: 'gift_001',
+          name: 'Ничего',
+          price: 0,
+        };
+      } else {
+        chosenGiftId = validItems[0].giftId;
+        chosenGift = gifts.find(g => g.id === chosenGiftId);
       }
     }
 
@@ -117,11 +93,8 @@ router.post('/:caseId', async (req, res) => {
           price: chosenGift.price,
         });
       }
-      if (caseId === 'case_13') {
+      if (caseId === 'case_1') {
         user.lastFreeDailySpin = new Date();
-      }
-      if (caseItem.isTopup) {
-        user.openedTopupCases.push(caseId);
       }
       await user.save();
 
