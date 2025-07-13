@@ -19,8 +19,7 @@ import { Server } from 'socket.io';
 import http from 'http';
 import LiveSpin from './models/LiveSpin.js';
 import Gift from './models/Gift.js';
-import authMiddleware from './middleware/auth.js'; // Импортируем middleware
-
+import { startStatsBot } from './utils/statsBot.js'; // Импорт бота
 
 dotenv.config();
 
@@ -31,12 +30,8 @@ const allowedOrigin = 'https://frontend272727.vercel.app/';
 const io = new Server(server);
 
 // Middleware
-app.use(cors())
+app.use(cors());
 app.use(express.json());
-
-
-// Применяем authMiddleware ко всем маршрутам
-//app.use(authMiddleware);
 
 // Подключение к MongoDB
 connectDB();
@@ -128,6 +123,7 @@ const generateLiveSpin = async () => {
 };
 
 generateLiveSpin();
+startStatsBot(); // Запускаем бота статистики
 
 // Запуск сервера
 const PORT = process.env.PORT || 5000;
